@@ -66,6 +66,8 @@ def homes_get_post():
         print("query is: ", query)
         q_limit = int(request.args.get('limit', '5'))
         q_offset = int(request.args.get('offset', '0'))
+        count = len(list(query.fetch()))
+        print("count is: ", count)
         g_iterator = query.fetch(limit= q_limit, offset=q_offset)
         pages = g_iterator.pages
         results = list(next(pages))
@@ -77,7 +79,8 @@ def homes_get_post():
         for e in results:
             e["id"] = e.key.id
             e["home_url"] = constants.appspot_url + constants.homes + "/" + str(e.key.id)
-        output = {"homes": results}
+        collection_header = "Home Collection Size is: " + str(count) + " total homes in collection"
+        output = {collection_header: results}
 
         if next_url:
             output["next"] = next_url
@@ -159,55 +162,35 @@ def homes_put_delete_get(hid):
 
     #---- DELETE: REMOVE A SPECIFIC HOME ----#
             elif request.method == 'DELETE':
-                # Check if JWT missing/invalid
-                jwt_param = request.args.get("jwt")
+               # Check if home contains pets, if so, update each pet[foster] to null
+                if 'pets' in boat.keys():
+                    print("home[pets] is: ", home["pets"])
+                    print("type of home[pets] is: ", type(home["pets"]))
+                    for i in home["cargo"]:
+                        print("i is: ", i)
+                        print("i[id] is: ", i["id"])
+                        print("i[cargo_url] is: ", i["cargo_url"])
+                        cargo_id = i["id"]
+                        cargo_key = client.key(constants.cargos, int(cargo_id))
+                        cargo = client.get(key=cargo_key)
+                        print("before update cargo[carrier]")
+                        print("cargo[carrier][id] was: ", cargo["carrier"]["id"])
+                        print("cargo[carrier][name] was: ", cargo["carrier"]["name"])
+                        print("cargo[carrier][boat_url] was: ", cargo["carrier"]["home_url"])
 
-                if jwt_param is None:
-                    print("no params")
-                    return("Missing/Invalid JWT", 401)
+                        cargo["carrier"]["id"] = "null"
+                        cargo["carrier"]["name"] = "null"
+                        cargo["carrier"]["boat_url"] = "null"
+                        client.put(cargo)
+                        print("cargo[carrier][id] is now: ", cargo["carrier"]["id"])
+                        print("cargo[carrier][name] is now: ", cargo["carrier"]["name"])
+                        print("cargo[carrier][home_url] is now: ", cargo["carrier"]["home_url"])
 
-                else:
-                    # Get the home
-                    home_key = client.key(constants.homes, int(hid))
-                    home = client.get(key=home_key)
-
-                    # Get the home's owner
-                    home_owner = home['owner']
-                    print("home_owner is: ", home_owner)
-
-
-                    # Confirm user is authorized to delete
-                    req = requests.Request()
-
-                    id_info = id_token.verify_oauth2_token(
-                    request.args['jwt'], req, constants.client_id)
-                    if(id_info['email'] == home_owner):
-
-                        # Check if home is docked in a slip --> if home_id == slip["current_home"]
-                        # Get that slip
-                        query = client.query(kind=constants.slips)
-                        query.add_filter('current_home', '=', hid)
-                        queryresults = list(query.fetch())
-                        print("queryresults is: ", queryresults)
-                        for e in queryresults:
-                            print("number is: ", e["number"])
-                            print("current_home is: ", e["current_home"])
-                            print("slip id is: ", e.key.id)
-                            slip_id = e.key.id
-
-                            slip_key = client.key(constants.slips, slip_id)
-                            slip = client.get(key=slip_key)
-                            slip["current_home"] = "null"
-                            slip["arrival_date"] = "null"
-                            client.put(slip)
-                        client.delete(home_key)
-
-                        return ('Deleted',204)
-                    else:
-                        return('Not authorized to delete home owned by another', 403)
+                # Actually delete the home <-- UNCOMMENT THIS AFTER DEBUG
+                # client.delete(home_key)   <-- UNCOMMENT THIS AFTER DEBUG
 
 
-            #---- NOT A RECOGNIZED METHOD ----#
+    #---- NOT A RECOGNIZED METHOD ----#
             else:
                 return ('Method not recognized', 405)
 
