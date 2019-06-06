@@ -1,6 +1,7 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, make_response
 from flask import request
 from google.cloud import datastore
+from json2html import *
 import json
 import constants
 
@@ -75,20 +76,36 @@ def homes_get_post():
             next_url = None
         for e in results:
             e["id"] = e.key.id
-            url = constants.appspot_url + constants.homes + "/" + str(e.key.id)
+            e["home_url"] = constants.appspot_url + constants.homes + "/" + str(e.key.id)
         output = {"homes": results}
 
         if next_url:
             output["next"] = next_url
-        return json.dumps(output)
+        # return json.dumps(output)
 
-        # query = client.query(kind=constants.homes)
-        # results = list(query.fetch())
-        # for e in results:
-        #     e["id"] = e.key.id
-        #     url = constants.appspot_url + constants.homes + "/" + str(e.key.id)
-        #     e["home_url"] =url
-        # return json.dumps(results)
+        # If client's Accept header is set application/json:
+        if 'application/json' in request.accept_mimetypes:
+            # return json.dumps(results)
+            res = make_response(json.dumps(output))
+            res.mimetype = 'application/json'
+            res.status_code = 200
+            return res
+
+        # Else, any other client Accept header is not acceptable format
+        else:
+             error_message = 'Not Acceptable: Must accept application/json only'
+             res = make_response(error_message)
+             res.status_code = 406
+             return res
+
+
+    #---- DELETE: DELETE ALL HOMES (NOT ALLOWED) ----#
+    elif request.method == 'DELETE':
+        return ('Method not allowed', 405)
+
+    #---- EDIT: EDIT ALL HOMES (NOT ALLOWED) ----#
+    elif request.method == 'PUT':
+        return ('Method not allowed', 405)
 
     else:
         return ('Method not recognized', 405)
