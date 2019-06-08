@@ -16,6 +16,9 @@ client = datastore.Client()
 
 bp = Blueprint('home', __name__, url_prefix='/homes')
 
+#--------------------------------------------------#
+# 1. /homes - POST, GET, DELETE, PUT
+#--------------------------------------------------#
 @bp.route('', methods=['POST','GET', 'DELETE', 'PUT'])
 def homes_get_post():
     #---- POST: CREATE A NEW HOME ----#
@@ -113,7 +116,10 @@ def homes_get_post():
     else:
         return ('Method not recognized', 405)
 
-@bp.route('/<hid>', methods=['PUT','DELETE','GET'])
+#--------------------------------------------------#
+# 2. /homes/{hid} - GET, PUT, DELETE
+#--------------------------------------------------#
+@bp.route('/<hid>', methods=['GET','PUT','DELETE'])
 def homes_put_delete_get(hid):
     # Check JWT: Missing/Invalid JWT --> 401
     jwt_param = request.args.get("jwt")
@@ -150,7 +156,22 @@ def homes_put_delete_get(hid):
                     e["id"] = hid
                     url = constants.appspot_url + constants.homes + "/" + hid
                     e["home_url"] = url
-                return json.dumps(results)
+                # return json.dumps(results)
+
+                # If client's Accept header is set application/json:
+                if 'application/json' in request.accept_mimetypes:
+                    # return json.dumps(results)
+                    res = make_response(json.dumps(results))
+                    res.mimetype = 'application/json'
+                    res.status_code = 200
+                    return res
+
+                # Else, any other client Accept header is not acceptable format
+                else:
+                    error_message = 'Not Acceptable: Must accept application/json only'
+                    res = make_response(error_message)
+                    res.status_code = 406
+                    return res
 
     #---- PUT: MODIFY A SPECIFIC HOME ----#
             elif request.method == 'PUT':
@@ -160,7 +181,7 @@ def homes_put_delete_get(hid):
                 # Can only edit family, address, phone properties
                 home.update({"family": content["family"], 'address': content['address'], 'phone': content['phone']})
                 client.put(home)
-                return ('',200)
+                return ('',204)
 
     #---- DELETE: REMOVE A SPECIFIC HOME ----#
             elif request.method == 'DELETE':
@@ -199,3 +220,23 @@ def homes_put_delete_get(hid):
         # IF USER NOT AUTHORIZED, CANNOT DO ANY OF THE ABOVE METHODS
         else:
             return('Not authorized to access home owned by another', 403)
+
+
+#--------------------------------------------------#
+# 3. /homes/{hid}/pets/{pid} - PUT, DELETE
+#--------------------------------------------------#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###

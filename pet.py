@@ -16,7 +16,10 @@ client = datastore.Client()
 
 bp = Blueprint('pet', __name__, url_prefix='/pets')
 
-@bp.route('', methods=['POST','GET'])
+#--------------------------------------------------#
+# 1. /pets - POST, GET, DELETE, PUT
+#--------------------------------------------------#
+@bp.route('', methods=['POST','GET', 'DELETE', 'PUT'])
 def pets_get_post():
     #---- POST: CREATE A NEW PET ----#
     if request.method == 'POST':
@@ -68,32 +71,72 @@ def pets_get_post():
           res.status_code = 406
           return res
 
+    #---- DELETE: DELETE ALL PETS (NOT ALLOWED) ----#
+    elif request.method == 'DELETE':
+        return ('Method not allowed', 405)
+
+    #---- EDIT: EDIT ALL PETS (NOT ALLOWED) ----#
+    elif request.method == 'PUT':
+        return ('Method not allowed', 405)
+
     #---- UNRECOGNIZED METHODS ----#
     else:
         return ('Method not recognized', 405)
 
-@bp.route('/<id>', methods=['PUT','DELETE','GET'])
-def cargo_put_delete_get(id):
-    #---- PUT: MODIFY A SPECIFIC CARGO ----#
-    if request.method == 'PUT':
+
+#--------------------------------------------------#
+# 2. /pets/{pid} - GET, PUT, DELETE
+#--------------------------------------------------#
+@bp.route('/<pid>', methods=['PUT','DELETE','GET'])
+def pet_put_delete_get(pid):
+    #---- GET: VIEW A SPECIFIC PET ----#
+    if request.method == 'GET':
+        query = client.query(kind=constants.pets)
+        pet_key = client.key(constants.pets,int(pid))
+        query.key_filter(pet_key,'=')
+        results = list(query.fetch())
+        for e in results:
+            e["id"] = pid
+            e["pet_url"] = constants.appspot_url + constants.pets + "/" + pid
+        # return json.dumps(results)
+
+        # If client's Accept header is set application/json:
+        if 'application/json' in request.accept_mimetypes:
+            # return json.dumps(results)
+            res = make_response(json.dumps(results))
+            res.mimetype = 'application/json'
+            res.status_code = 200
+            return res
+
+        # Else, any other client Accept header is not acceptable format
+        else:
+            error_message = 'Not Acceptable: Must accept application/json only'
+            res = make_response(error_message)
+            res.status_code = 406
+            return res
+
+
+    #---- PUT: MODIFY A SPECIFIC PET ----#
+    elif request.method == 'PUT':
         content = request.get_json()
-        cargo_key = client.key(constants.cargos, int(id))
-        cargo = client.get(key=cargo_key)
-        cargo.update({"weight": content["weight"], 'content': content['content'], 'delivery_date': content['delivery_date']})
-        client.put(cargo)
-        return ('',200)
+        pet_key = client.key(constants.pets, int(pid))
+        pet = client.get(key=pet_key)
+        # Can only edit name, species, breed properties
+        pet.update({"name": content["name"], 'species': content['species'], 'breed': content['breed']})
+        client.put(pet)
+        return ('',204)
 
     #---- DELETE: ELIMINATE A SPECIFIC CARGO (NOT the same as unload)----#
     elif request.method == 'DELETE':
         # Get the cargo
-        cargo_key = client.key(constants.cargos, int(id))
+        cargo_key = client.key(constants.cargos, int(pid))
         cargo = client.get(key=cargo_key)
 
         # 1. Update boat, if any
         if cargo["carrier"]["name"] != "null":
             # Get the boat
-            boat_id = cargo["carrier"]["id"]
-            boat_key = client.key(constants.boats, int(boat_id))
+            boat_pid = cargo["carrier"]["pid"]
+            boat_key = client.key(constants.boats, int(boat_pid))
             boat = client.get(key=boat_key)
             print("boat is: ", boat)
 
@@ -112,14 +155,7 @@ def cargo_put_delete_get(id):
 
         return ('',200)
 
-    #---- GET: VIEW A SPECIFIC CARGO ----#
-    elif request.method == 'GET':
-        query = client.query(kind=constants.cargos)
-        cargo_key = client.key(constants.cargos,int(id))
-        query.key_filter(cargo_key,'=')
-        results = list(query.fetch())
-        for e in results:
-            e["id"] = id
+
 
 
         # The below is for debugging --------
