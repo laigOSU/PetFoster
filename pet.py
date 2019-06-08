@@ -27,7 +27,7 @@ def pets_get_post():
         new_pet = datastore.entity.Entity(key=client.key(constants.pets))
         new_pet.update({"name": content["name"], 'species': content['species'], 'breed': content['breed']})
         client.put(new_pet)
-        new_pet["carrier"] = {"id": "null", "family": "null", "home_url": "null"}
+        new_pet["foster"] = {"id": "null", "family": "null", "home_url": "null"}
         client.put(new_pet)
         return (str(new_pet.key.id), 201)
 
