@@ -301,30 +301,41 @@ def assign_remove_pet(hid,pid):
 
     #---- DELETE: REMOVE A PET FROM A HOME ----#
     if request.method == 'DELETE':
-        boat_key = client.key(constants.boats, int(bid))
-        boat = client.get(key=boat_key)
+        # Get the home based on the hid
+        home_key = client.key(constants.homes, int(hid))
+        home = client.get(key=home_key)
 
-        cargo_key = client.key(constants.cargos, int(cid))
-        cargo = client.get(key=cargo_key)
+        # Get the pet based on the pid
+        pet_key = client.key(constants.pets, int(pid))
+        pet = client.get(key=pet_key)
 
-        cargo_json = {"id": cargo.id, "cargo_url": cargo["cargo_url"]}
+        # Declare the pet_json to work with home[pets]
+        pet_url = constants.appspot_url + constants.pets + "/" + str(pid)
+        pet_json = {"id": pet.id, "pet_url": pet_url}
+        print("pet_json is: ", pet_json)
 
-        if 'cargo' in boat.keys():
-            # 1. Update the boat[cargo] --> remove cid (cargo_json)
-            print("boat[cargo] is: ", boat["cargo"])
+        print("BEFORE: home is: ", home)
+        print("BEFORE: pet is: ", pet)
 
-            boat['cargo'].remove(cargo_json)
-            client.put(boat)
+        if 'pets' in home.keys():
+            # 1. Update the home[pets] --> remove pid (pet_json)
+            print("home[pets] is: ", home["pets"])
 
-            # 2. Update the cargo[carrier] = null
-            cargo["carrier"]["id"] = "null"
-            cargo["carrier"]["name"] = "null"
-            cargo["carrier"]["boat_url"] = "null"
+            home['pets'].remove(pet_json)
+            client.put(home)
 
-            client.put(cargo)
+            # 2. Update the pet[foster] = null
+            pet["foster"]["id"] = "null"
+            pet["foster"]["family"] = "null"
+            pet["foster"]["home_url"] = "null"
 
-        print("Cargo #", cid, "unloaded.")
-        return("Cargo removed", 200)
+            client.put(pet)
+        print("AFTER: home is: ", home)
+        print("AFTER: pet is: ", pet)
+
+
+        print("Pet #", pid, "removed from this home.")
+        return("Pet removed", 200)
 
 
 
