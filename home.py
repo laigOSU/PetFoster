@@ -129,103 +129,113 @@ def homes_put_delete_get(hid):
 
     # Check JWT: Valid JWT --> Check if authorized user
     else:
-        # Get the home to check the correct user
-        home_key = client.key(constants.homes, int(hid))
-        home = client.get(key=home_key)
+        # Check if hid exists
+        query = client.query(kind=constants.homes)
+        first_key = client.key(constants.homes,int(hid))
+        query.key_filter(first_key,'=')
+        results = list(query.fetch())
+        if len(results) == 0:
+            return ("Page not found (this home uri does not exist)", 404)
 
-        # Get the home's owner
-        home_owner = home['owner']
-        print("home_owner is: ", home_owner)
-
-        # Confirm user is authorized to access
-        req = requests.Request()
-
-        id_info = id_token.verify_oauth2_token(
-        request.args['jwt'], req, constants.client_id)
-
-        # IF USER AUTHORIZED, CAN DO GET, PUT, DELETE METHODS
-        if(id_info['email'] == home_owner):
-
-    #---- GET: VIEW A SPECIFIC HOME ----#
-            if request.method == 'GET':
-                query = client.query(kind=constants.homes)
-                first_key = client.key(constants.homes,int(hid))
-                query.key_filter(first_key,'=')
-                results = list(query.fetch())
-                for e in results:
-                    e["id"] = hid
-                    url = constants.appspot_url + constants.homes + "/" + hid
-                    e["home_url"] = url
-                # return json.dumps(results)
-
-                # If client's Accept header is set application/json:
-                if 'application/json' in request.accept_mimetypes:
-                    # return json.dumps(results)
-                    res = make_response(json.dumps(results))
-                    res.mimetype = 'application/json'
-                    res.status_code = 200
-                    return res
-
-                # Else, any other client Accept header is not acceptable format
-                else:
-                    error_message = 'Not Acceptable: Must accept application/json only'
-                    res = make_response(error_message)
-                    res.status_code = 406
-                    return res
-
-    #---- PUT: MODIFY A SPECIFIC HOME ----#
-            elif request.method == 'PUT':
-                content = request.get_json()
-                home_key = client.key(constants.homes, int(hid))
-                home = client.get(key=home_key)
-                # Can only edit family, address, phone properties
-                home.update({"family": content["family"], 'address': content['address'], 'phone': content['phone']})
-                client.put(home)
-                return ('',204)
-
-    #---- DELETE: REMOVE A SPECIFIC HOME ----#
-            elif request.method == 'DELETE':
-               # Check if home contains pets, if so, update each pet[foster] to null
-                if 'pets' in home.keys():
-                    print("home[pets] is: ", home["pets"])
-                    print("type of home[pets] is: ", type(home["pets"]))
-                    for i in home["pets"]:
-                        print("i is: ", i)
-                        print("i[id] is: ", i["id"])
-                        print("i[pet_url] is: ", i["pet_url"])
-                        pet_id = i["id"]
-
-                        # Get the pet id and the query that pet
-                        pet_key = client.key(constants.pets, int(pet_id))
-                        pet = client.get(key=pet_key)
-
-                        print("before update pet[foster]")
-                        print("pet[foster][id] was: ", pet["foster"]["id"])
-                        print("pet[foster][family] was: ", pet["foster"]["family"])
-                        print("pet[foster][home_url] was: ", pet["foster"]["home_url"])
-
-                        # Update the pet's foster information
-                        pet["foster"]["id"] = "null"
-                        pet["foster"]["family"] = "null"
-                        pet["foster"]["home_url"] = "null"
-                        client.put(pet)
-
-                        print("after update pet[foster]")
-                        print("pet[foster][id] is now: ", pet["foster"]["id"])
-                        print("pet[foster][family] is now: ", pet["foster"]["family"])
-                        print("pet[foster][home_url] is now: ", pet["foster"]["home_url"])
-
-                # Actually delete the home
-                client.delete(home_key)
-                return ("", 204)
-
-    #---- NOT A RECOGNIZED METHOD ----#
-            else:
-                return ('Method not recognized', 405)
-
-        # IF USER NOT AUTHORIZED, CANNOT DO ANY OF THE ABOVE METHODS
         else:
-            return('Not authorized to access home owned by another', 403)
+            # Get the home to check the correct user
+            home_key = client.key(constants.homes, int(hid))
+            home = client.get(key=home_key)
+
+            # Get the home's owner
+            home_owner = home['owner']
+            print("home_owner is: ", home_owner)
+
+            # Confirm user is authorized to access
+            req = requests.Request()
+
+            id_info = id_token.verify_oauth2_token(
+            request.args['jwt'], req, constants.client_id)
+
+            # IF USER AUTHORIZED, CAN DO GET, PUT, DELETE METHODS
+            if(id_info['email'] == home_owner):
+
+        #---- GET: VIEW A SPECIFIC HOME ----#
+                if request.method == 'GET':
+                    query = client.query(kind=constants.homes)
+                    first_key = client.key(constants.homes,int(hid))
+                    query.key_filter(first_key,'=')
+                    results = list(query.fetch())
+                    for e in results:
+                        e["id"] = hid
+                        url = constants.appspot_url + constants.homes + "/" + hid
+                        e["home_url"] = url
+
+                    # return json.dumps(results)
+
+                    # If client's Accept header is set application/json:
+                    if 'application/json' in request.accept_mimetypes:
+                        # return json.dumps(results)
+                        res = make_response(json.dumps(results))
+                        res.mimetype = 'application/json'
+                        res.status_code = 200
+                        return res
+
+                    # Else, any other client Accept header is not acceptable format
+                    else:
+                        error_message = 'Not Acceptable: Must accept application/json only'
+                        res = make_response(error_message)
+                        res.status_code = 406
+                        return res
+
+        #---- PUT: MODIFY A SPECIFIC HOME ----#
+                elif request.method == 'PUT':
+                    content = request.get_json()
+                    home_key = client.key(constants.homes, int(hid))
+                    home = client.get(key=home_key)
+                    # Can only edit family, address, phone properties
+                    home.update({"family": content["family"], 'address': content['address'], 'phone': content['phone']})
+                    client.put(home)
+                    return ('',204)
+
+        #---- DELETE: REMOVE A SPECIFIC HOME ----#
+                elif request.method == 'DELETE':
+                   # Check if home contains pets, if so, update each pet[foster] to null
+                    if 'pets' in home.keys():
+                        print("home[pets] is: ", home["pets"])
+                        print("type of home[pets] is: ", type(home["pets"]))
+                        for i in home["pets"]:
+                            print("i is: ", i)
+                            print("i[id] is: ", i["id"])
+                            print("i[pet_url] is: ", i["pet_url"])
+                            pet_id = i["id"]
+
+                            # Get the pet id and the query that pet
+                            pet_key = client.key(constants.pets, int(pet_id))
+                            pet = client.get(key=pet_key)
+
+                            print("before update pet[foster]")
+                            print("pet[foster][id] was: ", pet["foster"]["id"])
+                            print("pet[foster][family] was: ", pet["foster"]["family"])
+                            print("pet[foster][home_url] was: ", pet["foster"]["home_url"])
+
+                            # Update the pet's foster information
+                            pet["foster"]["id"] = "null"
+                            pet["foster"]["family"] = "null"
+                            pet["foster"]["home_url"] = "null"
+                            client.put(pet)
+
+                            print("after update pet[foster]")
+                            print("pet[foster][id] is now: ", pet["foster"]["id"])
+                            print("pet[foster][family] is now: ", pet["foster"]["family"])
+                            print("pet[foster][home_url] is now: ", pet["foster"]["home_url"])
+
+                    # Actually delete the home
+                    client.delete(home_key)
+                    return ("", 204)
+
+        #---- NOT A RECOGNIZED METHOD ----#
+                else:
+                    return ('Method not recognized', 405)
+
+            # IF USER NOT AUTHORIZED, CANNOT DO ANY OF THE ABOVE METHODS
+            else:
+                return('Not authorized to access home owned by another', 403)
 
 
 #--------------------------------------------------#
