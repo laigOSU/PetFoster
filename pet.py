@@ -1,33 +1,40 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, make_response
+from flask import request
 from google.cloud import datastore
+from json2html import *
 import json
 import constants
 
+from requests_oauthlib import OAuth2Session
+from google.oauth2 import id_token
+from google.auth import crypt
+from google.auth import jwt
+from google.auth.transport import requests
+import jwt
+
 client = datastore.Client()
 
-bp = Blueprint('cargo', __name__, url_prefix='/cargos')
+bp = Blueprint('pet', __name__, url_prefix='/pets')
 
-@bp.route('/', methods=['POST','GET'])
-def cargos_get_post():
-    #---- POST: CREATE A NEW CARGO ----#
+@bp.route('', methods=['POST','GET'])
+def pets_get_post():
+    #---- POST: CREATE A NEW PET ----#
     if request.method == 'POST':
         content = request.get_json()
-        new_cargo = datastore.entity.Entity(key=client.key(constants.cargos))
-        new_cargo.update({"weight": content["weight"], 'content': content['content'], 'delivery_date': content['delivery_date']})
-        client.put(new_cargo)
-        cargo_id = str(new_cargo.key.id)
-        url = constants.appspot_url + constants.cargos + "/" + cargo_id
-        new_cargo["cargo_url"] = url
-        client.put(new_cargo)
-        new_cargo["carrier"] = {"id": "null", "name": "null", "boat_url": "null"}
-        client.put(new_cargo)
-        return (str(new_cargo.key.id), 201)
+        new_pet = datastore.entity.Entity(key=client.key(constants.pets))
+        new_pet.update({"name": content["name"], 'species': content['species'], 'breed': content['breed']})
+        client.put(new_pet)
+        new_pet["carrier"] = {"id": "null", "family": "null", "home_url": "null"}
+        client.put(new_pet)
+        return (str(new_pet.key.id), 201)
 
-    #---- GET: VIEW ALL CARGOS ----#
+    #---- GET: VIEW ALL PETS ----#
     elif request.method == 'GET':
-        query = client.query(kind=constants.cargos)
-        q_limit = int(request.args.get('limit', '3'))
+        query = client.query(kind=constants.pets)
+        q_limit = int(request.args.get('limit', '5'))
         q_offset = int(request.args.get('offset', '0'))
+        count = len(list(query.fetch()))
+        print("count is: ", count)
         g_iterator = query.fetch(limit= q_limit, offset=q_offset)
         pages = g_iterator.pages
         results = list(next(pages))
@@ -38,13 +45,32 @@ def cargos_get_post():
             next_url = None
         for e in results:
             e["id"] = e.key.id
-        output = {"cargos": results}
+            e["pet_url"] = constants.appspot_url + constants.pets + "/" + str(e.key.id)
+        collection_header = "Pet Collection Size is: " + str(count) + " total pets in collection"
+        output = {collection_header: results}
+
         if next_url:
             output["next"] = next_url
-        return json.dumps(output)
+        # return json.dumps(output)
 
+        # If client's Accept header is set application/json:
+        if 'application/json' in request.accept_mimetypes:
+         # return json.dumps(results)
+         res = make_response(json.dumps(output))
+         res.mimetype = 'application/json'
+         res.status_code = 200
+         return res
+
+        # Else, any other client Accept header is not acceptable format
+        else:
+          error_message = 'Not Acceptable: Must accept application/json only'
+          res = make_response(error_message)
+          res.status_code = 406
+          return res
+
+    #---- UNRECOGNIZED METHODS ----#
     else:
-        return 'Method not recognized'
+        return ('Method not recognized', 405)
 
 @bp.route('/<id>', methods=['PUT','DELETE','GET'])
 def cargo_put_delete_get(id):

@@ -136,8 +136,9 @@ def homes_put_delete_get(hid):
 
         id_info = id_token.verify_oauth2_token(
         request.args['jwt'], req, constants.client_id)
-        if(id_info['email'] == home_owner):
 
+        # IF USER AUTHORIZED, CAN DO GET, PUT, DELETE METHODS
+        if(id_info['email'] == home_owner):
 
     #---- GET: VIEW A SPECIFIC HOME ----#
             if request.method == 'GET':
@@ -156,7 +157,8 @@ def homes_put_delete_get(hid):
                 content = request.get_json()
                 home_key = client.key(constants.homes, int(hid))
                 home = client.get(key=home_key)
-                home.update({"name": content["name"], 'type': content['type'], 'length': content['length']})
+                # Can only edit family, address, phone properties
+                home.update({"family": content["family"], 'address': content['address'], 'phone': content['phone']})
                 client.put(home)
                 return ('',200)
 
@@ -194,5 +196,6 @@ def homes_put_delete_get(hid):
             else:
                 return ('Method not recognized', 405)
 
+        # IF USER NOT AUTHORIZED, CANNOT DO ANY OF THE ABOVE METHODS
         else:
             return('Not authorized to access home owned by another', 403)
