@@ -14,6 +14,9 @@ client = datastore.Client()
 
 bp = Blueprint('user', __name__, url_prefix='/users')
 
+#--------------------------------------------------#
+# 1. /users - GET
+#--------------------------------------------------#
 @bp.route('', methods=['GET'])
 def users_get_post():
 #---- GET: VIEW ALL USERS ----#
@@ -25,8 +28,13 @@ def users_get_post():
         e["user_url"] =url
     return json.dumps(results)
 
+
+#--------------------------------------------------#
+# 2. /users/{uid}/homes - GET
+#--------------------------------------------------#
 @bp.route('/<uid>/homes', methods=['GET'])
-def get_users_boats(uid):
+def get_users_homes(uid):
+#---- GET: VIEW A USER'S HOMES ----#
     # Check JWT params
     jwt_param = request.args.get("jwt")
     if jwt_param is None:
@@ -53,7 +61,7 @@ def get_users_boats(uid):
         # Compare JWT email vs DB email matches
         if (db_email == jwt_email):
             print("Emails match, correct user")
-            query = client.query(kind=constants.boats)
+            query = client.query(kind=constants.homes)
             query.add_filter('owner', '=', jwt_email)
             queryresults = list(query.fetch())
             print ("queryresults are: ", queryresults)
@@ -61,4 +69,4 @@ def get_users_boats(uid):
 
             return(json.dumps(queryresults))
         else:
-            return("Not authorized to view boats of another user", 403)
+            return("Not authorized to view homes of another user", 403)
