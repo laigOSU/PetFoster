@@ -244,101 +244,123 @@ def homes_put_delete_get(hid):
 @bp.route('/<hid>/pets/<pid>', methods=['PUT','DELETE'])
 def assign_remove_pet(hid,pid):
 
-    # CHECK JWT HERE ----__________
+    # Check JWT: Missing/Invalid JWT --> 401
+    jwt_param = request.args.get("jwt")
+    if jwt_param is None:
+        print("no params")
+        return("Missing/Invalid JWT", 401)
 
-
-    #---- PUT: ASSIGN A PET TO A HOME ----#
-    if request.method == 'PUT':
-        # Get client input
-        content = request.get_json()
-
-        # Get the home based on the hid
+    # Check JWT: Valid JWT --> Check if authorized user
+    else:
+        # Get the home to check the correct user
         home_key = client.key(constants.homes, int(hid))
         home = client.get(key=home_key)
 
-        # Get the pet based on the pid
-        pet_key = client.key(constants.pets, int(pid))
-        pet = client.get(key=pet_key)
+        # Get the home's owner
+        home_owner = home['owner']
+        print("home_owner is: ", home_owner)
 
-        # Set the pet_url
-        pet_url = constants.appspot_url + constants.pets + "/" + str(pid)
+        # Confirm user is authorized to access
+        req = requests.Request()
 
-        # Set the home_url
-        home_url = constants.appspot_url + constants.homes + "/" + str(hid)
+        id_info = id_token.verify_oauth2_token(
+        request.args['jwt'], req, constants.client_id)
 
-        # Declare the pet_json, to append to home["pets"]
-        pet_json = {"id": pet.id, "pet_url": pet_url}
-        # print("pet_json is: ", pet_json)
-        # print("BEFORE: home is: ", home)
-        # print("BEFORE: pet is: ", pet)
+        # IF USER AUTHORIZED, CAN DO PUT, DELETE METHODS
+        if(id_info['email'] == home_owner):
 
-        # A. Check if pet not yet assigned to any home
-        if pet["foster"]["family"] == "null":
+        #---- PUT: ASSIGN A PET TO A HOME ----#
+            if request.method == 'PUT':
+                # Get client input
+                content = request.get_json()
 
-            # 1. Update the home --> home[pet] = pid
-            print("Pet not yet assigned to any home. So append (or add).")
+                # Get the home based on the hid
+                home_key = client.key(constants.homes, int(hid))
+                home = client.get(key=home_key)
 
-            if 'pets' in home.keys():
-                home['pets'].append(pet_json)
-                print("Appending subsequent pet to this boat")
-            else:
-                home['pets'] = [pet_json]
-                print("Adding first pet to this home.")
+                # Get the pet based on the pid
+                pet_key = client.key(constants.pets, int(pid))
+                pet = client.get(key=pet_key)
 
-            client.put(home)
+                # Set the pet_url
+                pet_url = constants.appspot_url + constants.pets + "/" + str(pid)
 
-            # 2. Update the pet --> pet[foster] = hid
-            pet["foster"]["id"] = home.key.id
-            pet["foster"]["family"] = home["family"]
-            pet["foster"]["home_url"] = home_url
+                # Set the home_url
+                home_url = constants.appspot_url + constants.homes + "/" + str(hid)
 
-            client.put(pet)
-            # print("AFTER: home is: ", home)
-            # print("AFTER: pet is: ", pet)
-            return("Pet assigned to this home", 200)
-        # B. Otherwise, pet already assigned somewhere, so 403 error.
-        else:
-            print("Pet already assigned to a home, cannot re-assign unless pet is removed from current foster.")
-            return("Pet already assigned to a foster home.", 403)
-        # return ("", 200)
+                # Declare the pet_json, to append to home["pets"]
+                pet_json = {"id": pet.id, "pet_url": pet_url}
+                # print("pet_json is: ", pet_json)
+                # print("BEFORE: home is: ", home)
+                # print("BEFORE: pet is: ", pet)
 
-    #---- DELETE: REMOVE A PET FROM A HOME ----#
-    if request.method == 'DELETE':
-        # Get the home based on the hid
-        home_key = client.key(constants.homes, int(hid))
-        home = client.get(key=home_key)
+                # A. Check if pet not yet assigned to any home
+                if pet["foster"]["family"] == "null":
 
-        # Get the pet based on the pid
-        pet_key = client.key(constants.pets, int(pid))
-        pet = client.get(key=pet_key)
+                    # 1. Update the home --> home[pet] = pid
+                    print("Pet not yet assigned to any home. So append (or add).")
 
-        # Declare the pet_json to work with home[pets]
-        pet_url = constants.appspot_url + constants.pets + "/" + str(pid)
-        pet_json = {"id": pet.id, "pet_url": pet_url}
-        print("pet_json is: ", pet_json)
+                    if 'pets' in home.keys():
+                        home['pets'].append(pet_json)
+                        print("Appending subsequent pet to this boat")
+                    else:
+                        home['pets'] = [pet_json]
+                        print("Adding first pet to this home.")
 
-        # print("BEFORE: home is: ", home)
-        # print("BEFORE: pet is: ", pet)
+                    client.put(home)
 
-        if 'pets' in home.keys():
-            # 1. Update the home[pets] --> remove pid (pet_json)
-            print("home[pets] is: ", home["pets"])
+                    # 2. Update the pet --> pet[foster] = hid
+                    pet["foster"]["id"] = home.key.id
+                    pet["foster"]["family"] = home["family"]
+                    pet["foster"]["home_url"] = home_url
 
-            home['pets'].remove(pet_json)
-            client.put(home)
+                    client.put(pet)
+                    # print("AFTER: home is: ", home)
+                    # print("AFTER: pet is: ", pet)
+                    return("Pet assigned to this home", 200)
+                # B. Otherwise, pet already assigned somewhere, so 403 error.
+                else:
+                    print("Pet already assigned to a home, cannot re-assign unless pet is removed from current foster.")
+                    return("Pet already assigned to a foster home.", 403)
+                # return ("", 200)
 
-            # 2. Update the pet[foster] = null
-            pet["foster"]["id"] = "null"
-            pet["foster"]["family"] = "null"
-            pet["foster"]["home_url"] = "null"
+        #---- DELETE: REMOVE A PET FROM A HOME ----#
+            if request.method == 'DELETE':
+                # Get the home based on the hid
+                home_key = client.key(constants.homes, int(hid))
+                home = client.get(key=home_key)
 
-            client.put(pet)
-        # print("AFTER: home is: ", home)
-        # print("AFTER: pet is: ", pet)
+                # Get the pet based on the pid
+                pet_key = client.key(constants.pets, int(pid))
+                pet = client.get(key=pet_key)
+
+                # Declare the pet_json to work with home[pets]
+                pet_url = constants.appspot_url + constants.pets + "/" + str(pid)
+                pet_json = {"id": pet.id, "pet_url": pet_url}
+                print("pet_json is: ", pet_json)
+
+                # print("BEFORE: home is: ", home)
+                # print("BEFORE: pet is: ", pet)
+
+                if 'pets' in home.keys():
+                    # 1. Update the home[pets] --> remove pid (pet_json)
+                    print("home[pets] is: ", home["pets"])
+
+                    home['pets'].remove(pet_json)
+                    client.put(home)
+
+                    # 2. Update the pet[foster] = null
+                    pet["foster"]["id"] = "null"
+                    pet["foster"]["family"] = "null"
+                    pet["foster"]["home_url"] = "null"
+
+                    client.put(pet)
+                # print("AFTER: home is: ", home)
+                # print("AFTER: pet is: ", pet)
 
 
-        print("Pet #", pid, "removed from this home.")
-        return("Pet removed", 200)
+                print("Pet #", pid, "removed from this home.")
+                return("Pet removed", 200)
 
 
 
