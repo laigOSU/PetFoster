@@ -30,8 +30,8 @@ client = datastore.Client()
 
 # This is the page that you will use to decode and collect the info from
 # the Google authentication flow
-redirect_uri = 'http://127.0.0.1:8080/oauth'
-# redirect_uri = 'https://laig493.appspot.com/oauth'
+# redirect_uri = 'http://127.0.0.1:8080/oauth'
+redirect_uri = 'https://laig493.appspot.com/oauth'
 
 # These let us get basic info to identify a user and not much else
 # they are part of the Google People API
