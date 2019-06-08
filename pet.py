@@ -126,49 +126,38 @@ def pet_put_delete_get(pid):
         client.put(pet)
         return ('',204)
 
-    #---- DELETE: ELIMINATE A SPECIFIC CARGO (NOT the same as unload)----#
+    #---- DELETE: REMOVE A SPECIFIC PET FROM THE SYSTEM (NOT the same as unassign from foster home)----#
     elif request.method == 'DELETE':
-        # Get the cargo
-        cargo_key = client.key(constants.cargos, int(pid))
-        cargo = client.get(key=cargo_key)
+        # Get the pet
+        pet_key = client.key(constants.pets, int(pid))
+        pet = client.get(key=pet_key)
 
-        # 1. Update boat, if any
-        if cargo["carrier"]["name"] != "null":
-            # Get the boat
-            boat_pid = cargo["carrier"]["pid"]
-            boat_key = client.key(constants.boats, int(boat_pid))
-            boat = client.get(key=boat_key)
-            print("boat is: ", boat)
+        # 1. Update home, if any
+        if pet["foster"]["family"] != "null":
+            # Get the home
+            home_id = pet["foster"]["id"]
+            home_key = client.key(constants.homes, int(home_id))
+            home = client.get(key=home_key)
+            print("home is: ", home)
 
-            # Update boat's cargo array
-            cargo_json = {"id": cargo.id, "cargo_url": cargo["cargo_url"]}
-            print("cargo.id is: ", cargo.id)
-            print("type of cargo.id is: ", type(cargo.id))
-            print("cargo.key.id is: ", cargo.key.id)
-            print("type of cargo.key.id is: ", type(cargo.key.id))
+            # Update home's pets array
+            pet_url = constants.appspot_url + constants.pets + "/" + str(pid)
+            pet_json = {"id": pet.id, "pet_url": pet_url}
+            print("pet_json is: ", pet_json)
+            print("pet.id is: ", pet.id)
+            print("type of pet.id is: ", type(pet.id))
+            print("pet.key.id is: ", pet.key.id)
+            print("type of pet.key.id is: ", type(pet.key.id))
 
-            boat["cargo"].remove(cargo_json)
-            client.put(boat)
+            # Remove the pet from home and save to the modified home to datastore
+            home["pets"].remove(pet_json)
+            client.put(home)
 
-        # 2. Remove the cargo entirely
-        client.delete(cargo_key)
+        # 2. Remove the pet entirely
+        client.delete(pet_key)
 
-        return ('',200)
+        return ('',204)
 
-
-
-
-        # The below is for debugging --------
-        cargo_key = client.key(constants.cargos, int(id))
-        cargo = client.get(key=cargo_key)
-        # print("cargo[carrier]: ", cargo["carrier"])
-        # print("cargo[carrier][name]: ", cargo["carrier"]["name"])
-        # print("cargo[carrier][id]: ", cargo["carrier"]["id"])
-        # print("cargo[carrier][boat_url]: ", cargo["carrier"]["boat_url"])
-        # print("cargo is", cargo)
-        # The above is for debugging --------
-
-        return json.dumps(results)
 
 
     else:
