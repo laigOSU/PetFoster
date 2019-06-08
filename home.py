@@ -186,32 +186,38 @@ def homes_put_delete_get(hid):
     #---- DELETE: REMOVE A SPECIFIC HOME ----#
             elif request.method == 'DELETE':
                # Check if home contains pets, if so, update each pet[foster] to null
-                if 'pets' in boat.keys():
+                if 'pets' in home.keys():
                     print("home[pets] is: ", home["pets"])
                     print("type of home[pets] is: ", type(home["pets"]))
-                    for i in home["cargo"]:
+                    for i in home["pets"]:
                         print("i is: ", i)
                         print("i[id] is: ", i["id"])
-                        print("i[cargo_url] is: ", i["cargo_url"])
-                        cargo_id = i["id"]
-                        cargo_key = client.key(constants.cargos, int(cargo_id))
-                        cargo = client.get(key=cargo_key)
-                        print("before update cargo[carrier]")
-                        print("cargo[carrier][id] was: ", cargo["carrier"]["id"])
-                        print("cargo[carrier][name] was: ", cargo["carrier"]["name"])
-                        print("cargo[carrier][boat_url] was: ", cargo["carrier"]["home_url"])
+                        print("i[pet_url] is: ", i["pet_url"])
+                        pet_id = i["id"]
 
-                        cargo["carrier"]["id"] = "null"
-                        cargo["carrier"]["name"] = "null"
-                        cargo["carrier"]["boat_url"] = "null"
-                        client.put(cargo)
-                        print("cargo[carrier][id] is now: ", cargo["carrier"]["id"])
-                        print("cargo[carrier][name] is now: ", cargo["carrier"]["name"])
-                        print("cargo[carrier][home_url] is now: ", cargo["carrier"]["home_url"])
+                        # Get the pet id and the query that pet
+                        pet_key = client.key(constants.pets, int(pet_id))
+                        pet = client.get(key=pet_key)
 
-                # Actually delete the home <-- UNCOMMENT THIS AFTER DEBUG
-                # client.delete(home_key)   <-- UNCOMMENT THIS AFTER DEBUG
+                        print("before update pet[foster]")
+                        print("pet[foster][id] was: ", pet["foster"]["id"])
+                        print("pet[foster][family] was: ", pet["foster"]["family"])
+                        print("pet[foster][home_url] was: ", pet["foster"]["home_url"])
 
+                        # Update the pet's foster information
+                        pet["foster"]["id"] = "null"
+                        pet["foster"]["family"] = "null"
+                        pet["foster"]["home_url"] = "null"
+                        client.put(pet)
+
+                        print("after update pet[foster]")
+                        print("pet[foster][id] is now: ", pet["foster"]["id"])
+                        print("pet[foster][family] is now: ", pet["foster"]["family"])
+                        print("pet[foster][home_url] is now: ", pet["foster"]["home_url"])
+
+                # Actually delete the home
+                client.delete(home_key)
+                return ("", 204)
 
     #---- NOT A RECOGNIZED METHOD ----#
             else:
@@ -252,22 +258,9 @@ def assign_remove_pet(hid,pid):
 
         # Declare the pet_json, to append to home["pets"]
         pet_json = {"id": pet.id, "pet_url": pet_url}
-        print("pet_json is: ", pet_json)
-        # print("BEFORE: pet[foster][home_url] is (manually added): ", pet["foster"]["home_url"])
-        print("BEFORE: home is: ", home)
-        print("BEFORE: pet is: ", pet)
-        # print("pet[foster] is: ",pet["foster"])
-        # print("pet[foster][id] is: ", pet["foster"]["id"])
-        # print("pet[foster][family] is: ",pet["foster"]["family"])
-        # print("pet[foster][home_url] is (manually added): ", home_url)
-        # print("pet id passed in is: ", pid)
-        # print("pet.id is: ", pet.id)
-        # print("pet is: ", pet)
-        # print("home: ", home)
-        # print("home.key.id: ", home.key.id)
-        # print("home[family]: ", home["family"])
-        # print("home[home_url] (manually added): ", home_url)
-
+        # print("pet_json is: ", pet_json)
+        # print("BEFORE: home is: ", home)
+        # print("BEFORE: pet is: ", pet)
 
         # A. Check if pet not yet assigned to any home
         if pet["foster"]["family"] == "null":
@@ -290,8 +283,8 @@ def assign_remove_pet(hid,pid):
             pet["foster"]["home_url"] = home_url
 
             client.put(pet)
-            print("AFTER: home is: ", home)
-            print("AFTER: pet is: ", pet)
+            # print("AFTER: home is: ", home)
+            # print("AFTER: pet is: ", pet)
             return("Pet assigned to this home", 200)
         # B. Otherwise, pet already assigned somewhere, so 403 error.
         else:
@@ -314,8 +307,8 @@ def assign_remove_pet(hid,pid):
         pet_json = {"id": pet.id, "pet_url": pet_url}
         print("pet_json is: ", pet_json)
 
-        print("BEFORE: home is: ", home)
-        print("BEFORE: pet is: ", pet)
+        # print("BEFORE: home is: ", home)
+        # print("BEFORE: pet is: ", pet)
 
         if 'pets' in home.keys():
             # 1. Update the home[pets] --> remove pid (pet_json)
@@ -330,8 +323,8 @@ def assign_remove_pet(hid,pid):
             pet["foster"]["home_url"] = "null"
 
             client.put(pet)
-        print("AFTER: home is: ", home)
-        print("AFTER: pet is: ", pet)
+        # print("AFTER: home is: ", home)
+        # print("AFTER: pet is: ", pet)
 
 
         print("Pet #", pid, "removed from this home.")
