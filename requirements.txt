@@ -8,3 +8,4 @@ google-auth-httplib2==0.0.3
 google-api-python-client==1.7.8
 requests==2.21.0
 PyJWT==1.6.1
+json2html==1.2.1
