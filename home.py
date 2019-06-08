@@ -362,6 +362,14 @@ def assign_remove_pet(hid,pid):
                 print("Pet #", pid, "removed from this home.")
                 return("Pet removed", 200)
 
+    #---- NOT A RECOGNIZED METHOD ----#
+            else:
+                return ('Method not recognized', 405)
+
+        # IF USER NOT AUTHORIZED, CANNOT DO ANY OF THE ABOVE METHODS
+        else:
+            return('Not authorized to access home owned by another', 403)
+
 
 
 
